@@ -5,12 +5,13 @@ from outliers_detector import OutliersFinder
 from misc import prepare_lightgbm_sets, remove_docs, rename_dict_key
 
 class SOUR():
-    def __init__(self, queries, labels, qs_len, eval_set=None, eval_group=None, eval_names=None):
+    def __init__(self, queries, labels, qs_len, eval_set=None, eval_labels = None, eval_group=None, eval_names=None):
         self.queries = queries
         self.labels = labels
         self.qs_len = qs_len
 
         self.eval_set = eval_set
+        self.eval_labels = eval_labels
         self.eval_group = eval_group
         self.eval_names = eval_names
 
@@ -46,7 +47,7 @@ class SOUR():
         cleaned_params["num_iterations"] = save_num_iterations
 
         clean_queries, clean_labels, clean_qs_lens = remove_docs(self.queries, self.labels, self.qs_len, idx_to_removed)
-        valid_sets, valid_names = prepare_lightgbm_sets((clean_queries, clean_labels, clean_qs_lens), [self.queries, self.labels, self.qs_len, self.eval_names])
+        valid_sets, valid_names = prepare_lightgbm_sets((clean_queries, clean_labels, clean_qs_lens), [self.queries, self.labels, self.qs_len, ["train_set"]])
         
         model = None
         if "init_model" in kwargs:
@@ -55,7 +56,7 @@ class SOUR():
         pre_end = 0
         for i, idx_to_removed in enumerate(outliers_finder.get_outliers_ids(self, p_sour=p_sour, last_sour=last_sour)):
             clean_queries, clean_labels, clean_qs_lens = remove_docs(self.queries, self.labels, self.qs_len, idx_to_removed)
-            valid_sets, valid_names = prepare_lightgbm_sets((clean_queries, clean_labels, clean_qs_lens), [self.queries, self.labels, self.qs_len, self.eval_names])        
+            valid_sets, valid_names = prepare_lightgbm_sets((clean_queries, clean_labels, clean_qs_lens), [self.queries, self.eval_labels, self.eval_group, self.eval_names])        
             
             if is_curr:
                 if i == len(end) - 1:
