@@ -25,8 +25,14 @@ class SOUR():
             outliers_finder = OutliersFinder(outliers_type, start, end, cutoff, min_neg_rel)
             train_set, valid_sets, valid_names = prepare_lightgbm_sets((self.queries, self.labels, self.qs_len), include_train=True)
 
-            save_early_stopping_rounds = cleaned_params["early_stopping_rounds"]
-            save_num_iterations = cleaned_params["num_iterations"]
+            save_early_stopping_rounds = 0
+            save_num_iterations = 100
+
+            if "early_stopping_rounds" in cleaned_params:
+                save_early_stopping_rounds = cleaned_params["early_stopping_rounds"]
+            if "num_iterations" in cleaned_params:
+                save_num_iterations = cleaned_params["num_iterations"]
+
             cleaned_params["early_stopping_rounds"] = 0
             cleaned_params["num_iterations"] = end
             
