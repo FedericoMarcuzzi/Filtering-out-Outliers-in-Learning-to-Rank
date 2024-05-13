@@ -19,7 +19,7 @@ Usage
 
 **SOUR** is accessible as a Python package. The following are the arguments of the ``train``method of the ``SOUR`` class:
   - ``params``: specify the [LightGBM parameters](https://lightgbm.readthedocs.io/en/latest/Parameters.html).
-  - ``outliers_type``: the type of outlier documents to remove. Accept: ``"neg"``, ``"pos"``, and ``"all"`` (see definition in the article).
+  - ``outliers_type``: the type of outlier documents to remove. Accepts: ``"neg"``, ``"pos"``, and ``"all"`` (see definition in the article).
   - ``start``: iteration to start tracking the outlier documents.
   - ``end``: iteration to stop tracking the outlier documents.
   - ``p_sour=1``: for 𝑝-SOUR variant: threshold frequency to consider an outlier document as a frequent outlier (defined in ``[0, 1]``).
