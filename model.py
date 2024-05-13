@@ -14,7 +14,7 @@ class SOUR():
         self.eval_group = eval_group
         self.eval_names = eval_names
 
-    def train(self, params, outliers_type, start, end, p_sour=1, last_sour=False, cutoff=None, min_neg_rel=0, idx_to_removed=None, **kargs):
+    def train(self, params, outliers_type, start, end, p_sour=1, last_sour=False, cutoff=None, min_neg_rel=0, idx_to_removed=None, **kwargs):
         if idx_to_removed is None:
             if cutoff is None:
                 cutoff = params['eval_at']
@@ -45,5 +45,5 @@ class SOUR():
 
         clean_queries, clean_labels, clean_qs_lens = remove_docs(self.queries, self.labels, self.qs_len, idx_to_removed)
         valid_sets, valid_names = prepare_lightgbm_sets((clean_queries, clean_labels, clean_qs_lens), [self.queries, self.labels, self.qs_len, self.eval_names])
-        model = lgb.train(params, train_set, valid_sets=valid_sets, valid_names=valid_names, **kargs)
+        model = lgb.train(params, train_set, valid_sets=valid_sets, valid_names=valid_names, **kwargs)
         return model
