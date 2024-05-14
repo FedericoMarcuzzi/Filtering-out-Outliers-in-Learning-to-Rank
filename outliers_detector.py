@@ -102,7 +102,7 @@ class OutliersFinder():
             return [self.last_outleirs_ids]
 
         if not curr_sour:
-            return [np.where(self.outleirs_ids[0] >= int(p_sour * (self.end - self.start)))[0]]
+            return [np.where(self.outleirs_ids >= int(p_sour * (self.end - self.start)))[0]]
 
         empty_docs_idx = np.array([], dtype=int)
         idx_to_remove = np.zeros(self.curr_outleirs_ids[0].shape)
