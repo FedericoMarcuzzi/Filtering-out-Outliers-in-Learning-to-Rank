@@ -13,7 +13,7 @@ class SOUR():
 
         self.eval_set = eval_set
 
-    def train(self, params, outliers_type, start, end, p_sour=1, last_sour=False, cutoff=None, min_neg_rel=0, num_iterations=None,  **kwargs):
+    def train(self, params, outliers_type, start, end, p_sour=1, last_sour=False, cutoff=None, min_neg_rel=0, num_iterations=None, **kwargs):
         if cutoff is None:
             cutoff = params['eval_at']
 
