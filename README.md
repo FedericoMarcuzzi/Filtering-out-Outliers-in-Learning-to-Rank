@@ -21,12 +21,11 @@ Usage
   - ``params``: specify the [LightGBM parameters](https://lightgbm.readthedocs.io/en/latest/Parameters.html).
   - ``outliers_type``: the type of outlier documents to remove. Accepts: ``"neg"``, ``"pos"``, and ``"all"`` (see definition in the article).
   - ``start``: iteration to start tracking the outlier documents.
-  - ``end``: iteration to stop tracking the outlier documents.
+  - ``end``: iteration to stop tracking the outlier documents. If *``list``* of ends *curr*-SOUR is used (see definition in the article).
   - ``p_sour=1``: for 𝑝-SOUR variant: threshold frequency to consider an outlier document as a frequent outlier (defined in ``[0, 1]``).
   - ``last_sour=False``: for *last*-SOUR variant: remove only outliers found in the last (``end``) training iteration.
   - ``cutoff=None``: starting rank to consider a document an outlier (see definition in the article). If ``None``, the ``"eval_at"`` [LightGBM parameter](https://lightgbm.readthedocs.io/en/latest/Parameters.html#eval_at) is used.
   - ``min_neg_rel=0``: minimal relevance label to consider a document as not relevant for the query (see definition in the article).
-  - ``idx_to_removed=None``: if provided, the outlier detection is skipped, and a training without the documents in ``idx_to_removed=None`` is performed.
 
 Note that the ``train`` method accepts the [LightGBM arguments](https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.train.html) as ``**kwargs``.
 
