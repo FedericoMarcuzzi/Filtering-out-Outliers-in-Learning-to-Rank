@@ -1,70 +1,62 @@
 import numpy as np
 import lightgbm as lgb
 
-from outliers_detector import OutliersFinder
-from misc import prepare_lightgbm_sets, remove_docs, rename_dict_key
+from .outliers_detector import OutliersFinder
+from .misc import prepare_lightgbm_sets, remove_docs, rename_dict_key
+
 
 class SOUR():
-    def __init__(self, queries, labels, qs_len, eval_set=None, eval_labels = None, eval_group=None, eval_names=None):
+    def __init__(self, queries, labels, qs_len, eval_set=None):
         self.queries = queries
         self.labels = labels
         self.qs_len = qs_len
 
         self.eval_set = eval_set
-        self.eval_labels = eval_labels
-        self.eval_group = eval_group
-        self.eval_names = eval_names
 
-    def train(self, params, outliers_type, start, end, p_sour=1, last_sour=False, cutoff=None, min_neg_rel=0, **kwargs):
+    def train(self, params, outliers_type, start, end, p_sour=1, last_sour=False, cutoff=None, min_neg_rel=0, num_iterations=None,  **kwargs):
         if cutoff is None:
             cutoff = params['eval_at']
 
-        is_curr = True
-        if type(end) is not list:
-            end = [end]
-            is_curr = False
+        end_num_boost_round = end
+        is_curr = False
+        if type(end) is list:
+            end_num_boost_round = end[-1]
+            is_curr = True
         
-        cleaned_params = rename_dict_key(params, "num_iterations", ["num_iterations", "num_iteration", "n_iter", "num_tree", "num_trees", "num_round", "num_rounds", "nrounds", "num_boost_round", "n_estimators", "max_iter"])
-        cleaned_params = rename_dict_key(params, "early_stopping_round", ["early_stopping_rounds", "early_stopping", "n_iter_no_change"])
+        safe_params = rename_dict_key(params, "num_iterations", ["num_iterations", "num_iteration", "n_iter", "num_tree", "num_trees", "num_round", "num_rounds", "nrounds", "num_boost_round", "n_estimators", "max_iter"])
+        safe_params = rename_dict_key(params, "early_stopping_round", ["early_stopping_rounds", "early_stopping", "n_iter_no_change"])
 
-        outliers_finder = OutliersFinder(outliers_type, start, end, cutoff, min_neg_rel)
+        outliers_finder = OutliersFinder(len(self.labels), outliers_type, start, end, cutoff, min_neg_rel, last_sour, is_curr)
         train_set, valid_sets, valid_names = prepare_lightgbm_sets((self.queries, self.labels, self.qs_len), include_train=True)
 
-        save_early_stopping_rounds = 0
-        save_num_iterations = 100
+        save_early_stop = None
+        save_num_iter = 100
 
-        if "early_stopping_rounds" in cleaned_params:
-            save_early_stopping_rounds = cleaned_params["early_stopping_rounds"]
-        if "num_iterations" in cleaned_params:
-            save_num_iterations = cleaned_params["num_iterations"]
+        if num_iterations is not None:
+            save_num_iter = num_iterations
+        if "num_iterations" in safe_params:
+            save_num_iter = safe_params.pop("num_iterations")
+        if "early_stopping_rounds" in safe_params:
+            save_early_stop = safe_params.pop("early_stopping_rounds")
 
-        cleaned_params["early_stopping_rounds"] = 0
-        cleaned_params["num_iterations"] = end[-1]
-        
-        model = lgb.train(cleaned_params, train_set, valid_sets=valid_sets, valid_names=valid_names, feval=outliers_finder)
+        lgb.train(safe_params, train_set, num_boost_round=end_num_boost_round, valid_sets=valid_sets, valid_names=valid_names, feval=outliers_finder)
 
-        cleaned_params["early_stopping_rounds"] = save_early_stopping_rounds
-        cleaned_params["num_iterations"] = save_num_iterations
-
-        clean_queries, clean_labels, clean_qs_lens = remove_docs(self.queries, self.labels, self.qs_len, idx_to_removed)
-        valid_sets, valid_names = prepare_lightgbm_sets((clean_queries, clean_labels, clean_qs_lens), [self.queries, self.labels, self.qs_len, ["train_set"]])
-        
-        model = None
-        if "init_model" in kwargs:
-            model = kwargs.pop("init_model")
+        safe_params["early_stopping_rounds"] = save_early_stop
+        model = kwargs.pop("init_model") if "init_model" in kwargs else None
 
         pre_end = 0
-        for i, idx_to_removed in enumerate(outliers_finder.get_outliers_ids(self, p_sour=p_sour, last_sour=last_sour)):
+        num_iterations = save_num_iter
+        for i, idx_to_removed in enumerate(outliers_finder.get_outliers_ids(p_sour=p_sour, last_sour=last_sour, curr_sour=is_curr)):
             clean_queries, clean_labels, clean_qs_lens = remove_docs(self.queries, self.labels, self.qs_len, idx_to_removed)
-            valid_sets, valid_names = prepare_lightgbm_sets((clean_queries, clean_labels, clean_qs_lens), [self.queries, self.eval_labels, self.eval_group, self.eval_names])        
+            train_set, valid_sets, valid_names = prepare_lightgbm_sets((clean_queries, clean_labels, clean_qs_lens), self.eval_set)
             
             if is_curr:
                 if i == len(end) - 1:
-                    cleaned_params["num_iterations"] = save_num_iterations - pre_end if save_num_iterations > pre_end else save_num_iterations, 
+                    num_iterations = save_num_iter - pre_end if save_num_iter > pre_end else save_num_iter
                 else:
-                    cleaned_params["num_iterations"] = (end[i] - pre_end)
+                    num_iterations = end[i] - pre_end
                     pre_end = end[i]
 
-            model = lgb.train(cleaned_params, train_set, valid_sets=valid_sets, valid_names=valid_names, init_model=model, **kwargs)
+            model = lgb.train(safe_params, train_set, num_boost_round=num_iterations, valid_sets=valid_sets, valid_names=valid_names, init_model=model, **kwargs)
 
         return model

@@ -1,38 +1,70 @@
 import numpy as np
 
+
 class OutliersFinder():
-    def __init__(self, outliers_type, start, end, cutoff, min_neg_rel=0):
+    def __init__(self, n_insts, outliers_type, start, end, cutoff, min_neg_rel=0, last_sour=False, curr_sour=False):
+        self.n_insts = n_insts
         self.outliers_type = outliers_type
         self.start = start
         self.end = end
         self.cutoff = cutoff
         self.min_neg_rel = min_neg_rel # minimal doc label to consider a document as not-relevant
+        self.last_sour = last_sour
+        self.curr_sour = curr_sour
 
-        self.all_outleirs_ids = [None] * len(end)
+
+        self.outleirs_ids = np.zeros((n_insts, ))
         self.last_outleirs_ids = None
+        self.curr_outleirs_ids = [np.zeros((n_insts, ))]
+
         self.iteration = 0
         self.curr_end = 0
+        self.perc_counter = 0.
 
         if self.outliers_type not in ["neg", "pos", "all"]:
             raise "<outliers_type> must by 'neg', 'pos', or 'all'"
+        
+        self.mode = self._sour
+        if self.last_sour:
+            self.mode = self._last_sour
+        if self.curr_sour:
+            self.mode = self._curr_sour
+
+    def _sour(self, y_score, data):
+        if data.params['name'] == "train":
+            if self.iteration >= self.start and self.iteration < self.end:
+                iter_outleirs_ids = self._compute_outliers_ids(data.label, y_score, data.group)
+                self.outleirs_ids[iter_outleirs_ids] += 1
+                self.perc_counter += 1
+
+        val = np.round(self.perc_counter / (self.end - self.start) * 100, decimals=2)
+        return ". mode: SOUR. Done %", val
+
+    def _curr_sour(self, y_score, data):
+        if data.params['name'] == "train":
+            if self.curr_end < len(self.end) - 1 and self.iteration >= self.end[self.curr_end]:
+                self.curr_end += 1
+                self.curr_outleirs_ids.append(np.copy(self.curr_outleirs_ids[self.curr_end - 1]))
+                
+            if self.iteration >= self.start and self.iteration < self.end[self.curr_end]:
+                iter_outleirs_ids = self._compute_outliers_ids(data.label, y_score, data.group)
+                self.curr_outleirs_ids[self.curr_end][iter_outleirs_ids] += 1
+                self.perc_counter += 1
+
+        val = np.round(self.perc_counter / (self.end[-1] - self.start) * 100, decimals=2)
+        return f". mode: curr-SOUR. Block [{self.start}, {self.end[self.curr_end]}). Done %", val
+
+    def _last_sour(self, y_score, data):
+        if data.params['name'] == "train":
+            if self.iteration == self.end - 1:
+                self.last_outleirs_ids = self._compute_outliers_ids(data.label, y_score, data.group)
+
+        return ". mode: last-SOUR. Last iter", self.end
 
     def __call__(self, y_score, data):
-        if self.curr_end < len(self.end):
-            if self.iteration < self.end[self.curr_end]:
-                if self.iteration >= self.start and data.params['name'] == 'train_set':
-                    if self.all_outleirs_ids[self.curr_end] is None:
-                        if self.curr_end == 0:
-                            self.all_outleirs_ids[self.curr_end] = np.zeros(y_score.shape)
-                        else:
-                            self.all_outleirs_ids[self.curr_end] = np.copy(self.all_outleirs_ids[self.curr_end - 1])
-
-                    self.last_outleirs_ids = self._compute_outliers_ids(data.label, y_score, data.group, self.cutoff)
-                    self.all_outleirs_ids[self.curr_end][self.last_outleirs_ids] += 1
-            else:
-                self.curr_end += 1
-
+        string, val = self.mode(y_score, data)
         self.iteration += 1
-        return '', 1, True
+        return f"algorithm{string}", val, True
 
     # computes positive and negative outlier documents' IDs
     def _compute_outliers_ids(self, y_true, y_score, qs_len):
@@ -67,19 +99,22 @@ class OutliersFinder():
     # gets consistent / frequent / last iteration outlier documents' IDs in the interval [start, end). NOTE: counting from zero.   
     def get_outliers_ids(self, p_sour=1, last_sour=False, curr_sour=False):
         if last_sour:
-            return self.last_outleirs_ids
-        
+            return [self.last_outleirs_ids]
+
         if not curr_sour:
-            return np.where(self.all_outleirs_ids[i] >= int(p_sour * (self.end[0] - self.start)))[0]
-        
+            return [np.where(self.outleirs_ids[0] >= int(p_sour * (self.end - self.start)))[0]]
+
         empty_docs_idx = np.array([], dtype=int)
-        idx_to_remove = np.zeros(self.all_outleirs_ids[0].shape)
-        list_outleirs_ids = [np.where(self.all_outleirs_ids[i] >= int(p_sour * (end - self.start)))[0] for i, end in enumerate(self.end)]
+        idx_to_remove = np.zeros(self.curr_outleirs_ids[0].shape)
+        list_outleirs_ids = [np.where(self.curr_outleirs_ids[i] >= int(p_sour * (end - self.start)))[0] for i, end in enumerate(self.end)]
         list_outleirs_ids.append(empty_docs_idx)
 
+        final_list = []
         for i, idx in enumerate(list_outleirs_ids):
             idx_to_remove[idx] += 1
-            yield np.where(idx_to_remove > i)[0]
+            final_list.append(np.where(idx_to_remove > i)[0])
+
+        return final_list
     
     def get_outliers_ids_from_score(self, y_true, y_score, qs_len):
-        return self._compute_outliers_ids(self, y_true, y_score, qs_len)
+        return self._compute_outliers_ids(y_true, y_score, qs_len)
