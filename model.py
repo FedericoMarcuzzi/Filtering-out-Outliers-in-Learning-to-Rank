@@ -13,7 +13,7 @@ class SOUR():
 
         self.eval_set = eval_set
 
-    def train(self, params, outliers_type, start, end, p_sour=1, last_sour=False, cutoff=None, min_neg_rel=0, num_iterations=None, **kwargs):
+    def train(self, params, outliers_type, start, end, p_sour=1, last_sour=False, cutoff=None, min_neg_rel=0, **kwargs):
         if cutoff is None:
             cutoff = params['eval_at']
 
@@ -33,10 +33,12 @@ class SOUR():
         save_early_stop = None
         save_num_iter = 100
 
-        if num_iterations is not None:
-            save_num_iter = num_iterations
+        flag_num_iters = False
+        if "num_iterations" in kwargs:
+            save_num_iter = kwargs.pop("num_iterations")
         if "num_iterations" in safe_params:
             save_num_iter = safe_params.pop("num_iterations")
+            flag_num_iters = True
         if "early_stopping_rounds" in safe_params:
             save_early_stop = safe_params.pop("early_stopping_rounds")
 
@@ -57,6 +59,9 @@ class SOUR():
                 else:
                     num_iterations = end[i] - pre_end
                     pre_end = end[i]
+
+                if flag_num_iters:
+                    safe_params["num_iterations"] = num_iterations
             
             model = lgb.train(params=safe_params, train_set=train_set, num_boost_round=num_iterations, valid_sets=valid_sets, valid_names=valid_names, init_model=model, **kwargs)
 

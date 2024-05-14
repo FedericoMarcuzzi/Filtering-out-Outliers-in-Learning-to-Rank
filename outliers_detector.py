@@ -38,7 +38,7 @@ class OutliersFinder():
                 self.perc_counter += 1
 
         val = np.round(self.perc_counter / (self.end - self.start) * 100, decimals=2)
-        return ". mode: SOUR. Done %", val
+        return f". mode: SOUR. block [{self.start}, {self.end}). done %", val
 
     def _curr_sour(self, y_score, data):
         if data.params['name'] == "train":
@@ -52,19 +52,19 @@ class OutliersFinder():
                 self.perc_counter += 1
 
         val = np.round(self.perc_counter / (self.end[-1] - self.start) * 100, decimals=2)
-        return f". mode: curr-SOUR. Block [{self.start}, {self.end[self.curr_end]}). Done %", val
+        return f". mode: curr-SOUR. block [{self.start}, {self.end[self.curr_end]}). done %", val
 
     def _last_sour(self, y_score, data):
         if data.params['name'] == "train":
             if self.iteration == self.end - 1:
                 self.last_outleirs_ids = self._compute_outliers_ids(data.label, y_score, data.group)
 
-        return ". mode: last-SOUR. Last iter", self.end
+        return ". mode: last-SOUR. last iter", self.end
 
     def __call__(self, y_score, data):
         string, val = self.mode(y_score, data)
         self.iteration += 1
-        return f"algorithm{string}", val, True
+        return f"outliers{string}", val, True
 
     # computes positive and negative outlier documents' IDs
     def _compute_outliers_ids(self, y_true, y_score, qs_len):
