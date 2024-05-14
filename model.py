@@ -40,7 +40,7 @@ class SOUR():
         if "early_stopping_rounds" in safe_params:
             save_early_stop = safe_params.pop("early_stopping_rounds")
 
-        lgb.train(safe_params, train_set, num_boost_round=end_num_boost_round, valid_sets=valid_sets, valid_names=valid_names, feval=outliers_finder)
+        lgb.train(params=safe_params, train_set=train_set, num_boost_round=end_num_boost_round, valid_sets=valid_sets, valid_names=valid_names, feval=outliers_finder, **kwargs)
 
         safe_params["early_stopping_rounds"] = save_early_stop
         model = kwargs.pop("init_model") if "init_model" in kwargs else None
@@ -52,12 +52,12 @@ class SOUR():
             train_set, valid_sets, valid_names = prepare_lightgbm_sets((clean_queries, clean_labels, clean_qs_lens), self.eval_set)
             
             if is_curr:
-                if i == len(end) - 1:
+                if i >= len(end):
                     num_iterations = save_num_iter - pre_end if save_num_iter > pre_end else save_num_iter
                 else:
                     num_iterations = end[i] - pre_end
                     pre_end = end[i]
-
-            model = lgb.train(safe_params, train_set, num_boost_round=num_iterations, valid_sets=valid_sets, valid_names=valid_names, init_model=model, **kwargs)
+            
+            model = lgb.train(params=safe_params, train_set=train_set, num_boost_round=num_iterations, valid_sets=valid_sets, valid_names=valid_names, init_model=model, **kwargs)
 
         return model
