@@ -20,6 +20,7 @@ class SOUR():
         end_num_boost_round = end
         is_curr = False
         if type(end) is list:
+            end = sorted(end)
             end_num_boost_round = end[-1]
             is_curr = True
         
