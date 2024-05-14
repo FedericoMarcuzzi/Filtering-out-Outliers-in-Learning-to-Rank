@@ -12,7 +12,7 @@ Implementation
 ---
 
 **SOUR** (<ins>S</ins>urrender on <ins>Ou</ins>tliers and <ins>R</ins>ank) is a consistent outliers detector and removal algorithm built on top of [LightGBM](https://github.com/microsoft/LightGBM).
-The code implements SOUR and the two variants presented in the article: *last*-SOUR and 𝑝-SOUR.
+The code implements SOUR and the two variants presented in the article: *last*-SOUR, 𝑝-SOUR, and *curr*-SOUR.
 
 Usage
 ---
